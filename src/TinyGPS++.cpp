@@ -32,6 +32,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GNRMCterm   "GNRMC"
 #define _GNGGAterm   "GNGGA"
 
+#if defined(__ZEPHYR__)
+#include <zephyr/kernel.h>
+
+static uint32_t millis(void) {
+  return (static_cast<uint32_t>(k_uptime_get()));
+}
+#endif // if defined(ZEPHYR)
+
 TinyGPSPlus::TinyGPSPlus()
   :  parity(0)
   ,  isChecksumTerm(false)
@@ -161,7 +169,7 @@ bool TinyGPSPlus::endOfTermHandler()
   // If it's the checksum term, and the checksum checks out, commit
   if (isChecksumTerm)
   {
-    byte checksum = 16 * fromHex(term[0]) + fromHex(term[1]);
+    uint8_t checksum = 16 * fromHex(term[0]) + fromHex(term[1]);
     if (checksum == parity)
     {
       passedChecksumCount++;
@@ -336,6 +344,10 @@ const char *TinyGPSPlus::cardinal(double course)
   return directions[direction % 16];
 }
 
+uint32_t TinyGPSLocation::age() const {
+  return valid ? millis() - lastCommitTime : (uint32_t)ULONG_MAX; 
+}
+
 void TinyGPSLocation::commit()
 {
    rawLatData = rawNewLatData;
@@ -368,11 +380,20 @@ double TinyGPSLocation::lng()
    return rawLngData.negative ? -ret : ret;
 }
 
+uint32_t TinyGPSDate::age() const {
+  return valid ? millis() - lastCommitTime : (uint32_t)ULONG_MAX;
+}
+
+
 void TinyGPSDate::commit()
 {
    date = newDate;
    lastCommitTime = millis();
    valid = updated = true;
+}
+
+uint32_t TinyGPSTime::age() const {
+  return valid ? millis() - lastCommitTime : (uint32_t)ULONG_MAX;
 }
 
 void TinyGPSTime::commit()
@@ -435,6 +456,10 @@ uint8_t TinyGPSTime::centisecond()
    return time % 100;
 }
 
+uint32_t TinyGPSDecimal::age() const  {
+  return valid ? millis() - lastCommitTime : (uint32_t)ULONG_MAX;
+}
+
 void TinyGPSDecimal::commit()
 {
    val = newval;
@@ -447,6 +472,10 @@ void TinyGPSDecimal::set(const char *term)
    newval = TinyGPSPlus::parseDecimal(term);
 }
 
+uint32_t TinyGPSInteger::age() const  {
+  return valid ? millis() - lastCommitTime : (uint32_t)ULONG_MAX;
+}
+
 void TinyGPSInteger::commit()
 {
    val = newval;
@@ -457,6 +486,10 @@ void TinyGPSInteger::commit()
 void TinyGPSInteger::set(const char *term)
 {
    newval = atol(term);
+}
+
+uint32_t TinyGPSCustom::age() const {
+  return valid ? millis() - lastCommitTime : (uint32_t)ULONG_MAX;
 }
 
 TinyGPSCustom::TinyGPSCustom(TinyGPSPlus &gps, const char *_sentenceName, int _termNumber)
