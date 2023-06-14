@@ -24,11 +24,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef __TinyGPSPlus_h
 #define __TinyGPSPlus_h
 
+#if defined(__ZEPHYR__) // Zephyr
+#include <stdint.h>
+#include <zephyr/kernel.h>
+#else // Arduino
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
 #else
 #include "WProgram.h"
 #endif
+#endif // if defined(ZEPHYR)
+
+
+
 #include <limits.h>
 
 #define _GPS_VERSION "1.0.3" // software version of this library
@@ -39,6 +47,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GPS_KM_PER_METER 0.001
 #define _GPS_FEET_PER_METER 3.2808399
 #define _GPS_MAX_FIELD_SIZE 15
+
+#if defined(__ZEPHYR__)
+#define millis k_uptime_get
+typedef uint8_t byte;
+#endif // if defined(ZEPHYR)
 
 struct RawDegrees
 {
@@ -234,8 +247,11 @@ public:
 
   static const char *libraryVersion() { return _GPS_VERSION; }
 
+// TODO Port this function
+#if !defined(__ZEPHYR__)
   static double distanceBetween(double lat1, double long1, double lat2, double long2);
   static double courseTo(double lat1, double long1, double lat2, double long2);
+#endif
   static const char *cardinal(double course);
 
   static int32_t parseDecimal(const char *term);
